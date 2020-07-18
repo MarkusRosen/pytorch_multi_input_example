@@ -1,9 +1,12 @@
+from os import remove
 import pandas as pd
 import os
 from typing import List, Dict
 from PIL import Image
 import seaborn as sns
 import matplotlib.pyplot as plt
+import numpy as np
+from torch import float32
 
 data_path = "./data/"
 
@@ -30,15 +33,42 @@ def resize_images(images: List[str]):
         new_image.save(f"{data_path}processed_images/{i}")
 
 
+def remove_outliers(df: pd.DataFrame, col: str):
+    q_low = df[col].quantile(0.02)
+    q_hi = df[col].quantile(0.98)
+    df_filtered = df[(df[col] < q_hi) & (df[col] > q_low)]
+
+    return df_filtered
+
+
 images = os.listdir(f"{data_path}images")
 df = pd.read_pickle(f"{data_path}ny_dataframe.pkl")
 
 
 df = select_rows_with_images(images, df)
 df = df.iloc[0:800]
-print(df.describe())
-ax = sns.boxplot(x=df["baths"])
-plt.show()
 
+df["unformattedPrice"] = df["unformattedPrice"].astype(float)
+df["latLong_latitude"] = df["latLong_latitude"].astype(float)
+df["latLong_longitude"] = df["latLong_longitude"].astype(float)
+df["beds"] = df["beds"].astype(float)
+df["baths"] = df["baths"].astype(float)
+df["area"] = df["area"].astype(float)
+print(df.describe())
+ax = sns.boxplot(x=df["unformattedPrice"])
+plt.show()
+print(df.dtypes)
+
+# for col in df.columns[1:]:
+#    df = remove_outliers(df, col)
+
+df = remove_outliers(df, "unformattedPrice")
+df = remove_outliers(df, "beds")
+df = remove_outliers(df, "baths")
+df = remove_outliers(df, "area")
+print(df.describe())
+ax = sns.boxplot(x=df["unformattedPrice"])
+plt.show()
 df.to_pickle(f"{data_path}df.pkl")
+
 # resize_images(images)

@@ -121,7 +121,7 @@ if __name__ == "__main__":
     use_cuda = torch.cuda.is_available()
     device = torch.device("cuda:0" if use_cuda else "cpu")
     image_data = ImageDataset(pickle_file=f"{data_path}df.pkl", image_dir=f"{data_path}processed_images/")
-    params = {"batch_size": 4, "shuffle": True, "num_workers": 4}
+    params = {"batch_size": 64, "shuffle": True, "num_workers": 4}
     max_epochs = 200
 
     train_loader = DataLoader(image_data, **params)

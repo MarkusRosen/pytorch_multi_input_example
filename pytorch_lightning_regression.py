@@ -61,7 +61,7 @@ def conv_block(input_size, output_size):
 
 
 class LitClassifier(pl.LightningModule):
-    def __init__(self, lr):
+    def __init__(self, lr=1e-3):
         super().__init__()
         self.lr = lr
         self.conv1 = conv_block(3, 16)
@@ -93,7 +93,7 @@ class LitClassifier(pl.LightningModule):
         return self.ln3(x)
 
     def train_dataloader(self):
-        return DataLoader(image_data, batch_size=64)
+        return DataLoader(image_data, batch_size=32)
 
     def training_step(self, batch, batch_nb):
         x, y = batch
@@ -102,32 +102,32 @@ class LitClassifier(pl.LightningModule):
         # print(self(x))
         # print(y)
         # print(torch.flatten(self(x)))
-        loss = torch.nn.functional.l1_loss(torch.flatten(self(x)), y)
+        criterion = torch.nn.L1Loss()
+        y_pred = torch.flatten(self(x))
+        y_pred = y_pred.double()
+        # loss =  torch.sqrt(criterion(y_pred, y))
+        loss = criterion(y_pred, y)
 
         tensorboard_logs = {"train_loss": loss}
         return {"loss": loss, "log": tensorboard_logs}
 
     def configure_optimizers(self):
-        return torch.optim.Adam(self.parameters(), lr=(self.lr), weight_decay=1e-3 / 200)
+        return torch.optim.Adam(self.parameters(), lr=(self.lr))
 
 
 if __name__ == "__main__":
     image_data = ImageDataset(pickle_file=f"{data_path}df.pkl", image_dir=f"{data_path}processed_images/")
-    params = {"batch_size": 64}
-    # train_loader = DataLoader(image_data, **params)
 
-    model = LitClassifier(0.3)
-    mlflow_logger = pl_loggers.MLFlowLogger("logs/")
-    trainer = pl.Trainer(gpus=1, logger=mlflow_logger)
+    model = LitClassifier()
+    # mlflow_logger = pl_loggers.MLFlowLogger("logs/")
+    trainer = pl.Trainer(gpus=1)
 
     lr_finder = trainer.lr_find(model)
     print(lr_finder.results)
     fig = lr_finder.plot(suggest=True, show=True)
 
-    # fig.show(block=True)
-
     new_lr = lr_finder.suggestion()
     print(new_lr)
-    model.hparams.lr = new_lr
+    model.hparams.lr = new_lr  # 1e-2
 
     trainer.fit(model)
