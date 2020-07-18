@@ -1,0 +1,7 @@
+/env
+/.vscode
+/data
+/lightning_logs
+/mlruns
+/default
+/1
