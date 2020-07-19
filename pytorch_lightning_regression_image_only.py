@@ -11,7 +11,6 @@ import pytorch_lightning as pl
 from pytorch_lightning.logging import TensorBoardLogger
 from pytorch_lightning.callbacks.early_stopping import EarlyStopping
 
-
 data_path = "./data/"
 
 
@@ -21,6 +20,7 @@ class ImageDataset(Dataset):
     def __init__(self, pickle_file, image_dir):
         self.image_dir = image_dir
         self.pickle_file = pickle_file
+
         self.tabular = pd.read_pickle(pickle_file)
 
     def __len__(self):
@@ -36,6 +36,7 @@ class ImageDataset(Dataset):
 
         image = Image.open(f"{self.image_dir}/{tabular['zpid']}.png")
         image = np.array(image)
+
         image = image[..., :3]
 
         image = transforms.functional.to_tensor(image)
@@ -44,7 +45,7 @@ class ImageDataset(Dataset):
         tabular = tabular.tolist()
         tabular = torch.FloatTensor(tabular)
 
-        return image, tabular, y
+        return image, y
 
 
 def conv_block(input_size, output_size):
@@ -72,43 +73,28 @@ class LitClassifier(pl.LightningModule):
         self.relu = nn.ReLU()
         self.batchnorm = nn.BatchNorm1d(16)
         self.dropout = nn.Dropout2d(0.5)
-        self.ln2 = nn.Linear(16, 5)
+        self.ln2 = nn.Linear(16, 4)
+        self.ln3 = nn.Linear(4, 1)
 
-        self.ln4 = nn.Linear(5, 10)
-        self.ln5 = nn.Linear(10, 10)
-        self.ln6 = nn.Linear(10, 5)
-        self.ln7 = nn.Linear(10, 1)
-
-    def forward(self, img, tab):
-        img = self.conv1(img)
-
-        img = self.conv2(img)
-        img = self.conv3(img)
-        img = img.reshape(img.shape[0], -1)
-        img = self.ln1(img)
-        img = self.relu(img)
-        img = self.batchnorm(img)
-        img = self.dropout(img)
-        img = self.ln2(img)
-        img = self.relu(img)
-
-        tab = self.ln4(tab)
-        tab = self.relu(tab)
-        tab = self.ln5(tab)
-        tab = self.relu(tab)
-        tab = self.ln6(tab)
-        tab = self.relu(tab)
-
-        x = torch.cat((img, tab), dim=1)
+    def forward(self, x):
+        x = self.conv1(x)
+        x = self.conv2(x)
+        x = self.conv3(x)
+        x = x.reshape(x.shape[0], -1)
+        x = self.ln1(x)
         x = self.relu(x)
 
-        return self.ln7(x)
+        x = self.dropout(x)
+        x = self.ln2(x)
+        x = self.relu(x)
+
+        return self.ln3(x)
 
     def training_step(self, batch, batch_idx):
-        image, tabular, y = batch
+        x, y = batch
 
         criterion = torch.nn.L1Loss()
-        y_pred = torch.flatten(self(image, tabular))
+        y_pred = torch.flatten(self(x))
         y_pred = y_pred.double()
 
         loss = criterion(y_pred, y)
@@ -117,10 +103,10 @@ class LitClassifier(pl.LightningModule):
         return {"loss": loss, "log": tensorboard_logs}
 
     def validation_step(self, batch, batch_idx):
-        image, tabular, y = batch
+        x, y = batch
 
         criterion = torch.nn.L1Loss()
-        y_pred = torch.flatten(self(image, tabular))
+        y_pred = torch.flatten(self(x))
         y_pred = y_pred.double()
 
         val_loss = criterion(y_pred, y)
@@ -133,10 +119,10 @@ class LitClassifier(pl.LightningModule):
         return {"val_loss": avg_loss, "log": tensorboard_logs}
 
     def test_step(self, batch, batch_idx):
-        image, tabular, y = batch
+        x, y = batch
 
         criterion = torch.nn.L1Loss()
-        y_pred = torch.flatten(self(image, tabular))
+        y_pred = torch.flatten(self(x))
         y_pred = y_pred.double()
 
         test_loss = criterion(y_pred, y)
@@ -172,7 +158,7 @@ class LitClassifier(pl.LightningModule):
 
 
 if __name__ == "__main__":
-    logger = TensorBoardLogger("lightning_logs", name="multi_input")
+    logger = TensorBoardLogger("lightning_logs", name="image_only")
     early_stop_callback = EarlyStopping(monitor="val_loss", min_delta=5000, patience=7, verbose=False, mode="min")
 
     model = LitClassifier()

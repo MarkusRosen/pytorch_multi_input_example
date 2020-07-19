@@ -5,3 +5,7 @@
 /mlruns
 /default
 /1
+/multi_input
+/my_model
+/image_only
+/temp_model.ckpt
