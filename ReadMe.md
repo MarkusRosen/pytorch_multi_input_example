@@ -1,4 +1,4 @@
-# Creating a map and KDE plot of points and polygons with Python
+# Multi-Input Deep Neural Networks with PyTorch-Lightning - Combine Image and Tabular Data
 
 ![Input image.](teaser.png)
 
