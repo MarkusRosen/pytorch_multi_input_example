@@ -45,7 +45,7 @@ pyparsing==2.4.7
 pypiwin32==223
 python-dateutil==2.8.1
 python-editor==1.0.4
-pytorch-lightning==0.8.5
+pytorch-lightning==1.6.0
 pytz==2020.1
 PyYAML==5.4
 querystring-parser==1.2.4
